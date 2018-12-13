@@ -1,0 +1,12 @@
+---
+- hosts: ofm
+  gather_facts: false
+  
+  tasks:
+    - name: Executando inventário
+      script: ./getHostname.sh
+
+    - name: Copiando resultado para diretório local
+      fetch:
+        src: /tmp/result.txt
+        dest: ./result-{{ inventory_hostname }}.txt
