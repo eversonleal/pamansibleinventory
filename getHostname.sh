@@ -1,0 +1,1 @@
+hostname > /tmp/result.txt
