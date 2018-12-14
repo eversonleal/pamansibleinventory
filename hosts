@@ -12,7 +12,7 @@ def getEnvVariable(variable):
 		return os.environ[variable]
 	except:
 		sys.stderr.write(variable + ' environment variable not found\n')
-		return ''
+		return
 
 
 # Password safe API URL
@@ -25,7 +25,12 @@ AUTH_KEY = getEnvVariable('PS_AUTH_KEY')
 RUN_AS = getEnvVariable('PS_RUN_AS')
 
 # Server name list as it is on Password Safe
-SERVERS =getEnvVariable('PS_SERVERS').split(',')
+HOSTS = getEnvVariable('PS_HOSTS')
+if HOSTS:
+	HOSTS = HOSTS.split(',')
+
+# Server user account that the password will be retrieved from PAM
+HOST_ACCOUNT = getEnvVariable('PS_HOST_ACCOUNT')
 
 # Ansible host group name
 GROUP_NAME = getEnvVariable('PS_GROUP_NAME')
@@ -36,8 +41,8 @@ REASON = getEnvVariable('PS_REASON')
 # Ansible host group name
 DURATION_MINUTES = getEnvVariable('PS_DURATION_MINUTES')
 
-
-if BASEURL == '' or AUTH_KEY == '' or RUN_AS == '' or SERVERS == [] or GROUP_NAME == '' or REASON == '' or DURATION_MINUTES == '':
+# Variables values
+if not(BASEURL and AUTH_KEY and RUN_AS and HOSTS and HOST_ACCOUNT and GROUP_NAME and REASON and DURATION_MINUTES):
 	sys.exit(1)
 
 # Creating session
@@ -55,10 +60,9 @@ requests = json.loads(response.text)
 groupJson = []
 variablesJson = {}
 
-for serverName in SERVERS:
+for serverName in HOSTS:
 	# Getting data to create a password request
-	accountName = 'root'
-	response = session.get(url = BASEURL + 'ManagedAccounts?systemName=' + serverName + '&accountName=' + accountName, verify = False)
+	response = session.get(url = BASEURL + 'ManagedAccounts?systemName=' + serverName + '&accountName=' + HOST_ACCOUNT, verify = False)
 	
 	try:
 		account=json.loads(response.text)
@@ -68,9 +72,6 @@ for serverName in SERVERS:
 		continue
 
 	requestId = ''
-
-	response = session.get(url = BASEURL + 'Assets/' + systemId, verify = False)
-
 	# Check if exists a request for the account
 	for request in requests:
 		if systemId == str(request['SystemID']) and accountId == str(request['AccountID']):
@@ -93,10 +94,11 @@ for serverName in SERVERS:
 	password=json.loads(response.text)
 
 	groupJson.append(serverName) 
-	variablesJson[serverName] = dict(ansible_user = accountName, ansible_password = password)
+	variablesJson[serverName] = dict(ansible_user = HOST_ACCOUNT, ansible_password = password)
 # Logging out
 response = session.post(url = BASEURL + 'Auth/Signout', verify = False)
 
+# Assign results to the output structure
 inventory = {}
 inventory[GROUP_NAME] = []
 inventory[GROUP_NAME] = groupJson
@@ -104,3 +106,4 @@ inventory['_meta'] = dict(hostvars = variablesJson)
 
 # Print the result JSON
 sys.stdout.write(json.dumps(inventory))
+
