@@ -1,5 +1,5 @@
 # What is it?
-An utility to run an Ansible playbook getting SSH user's password from BeyondTrust Privileged Account Management dynamically through the API.
+An Ansible dynamic inventory to run playbooks getting SSH user's password from BeyondTrust Privileged Account Management through API.
 # How to:
 Password Safe account settings:
 
